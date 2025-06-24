@@ -9,6 +9,7 @@ A todo-list application written with flutter.
 - [ ] Welcome screen
 - [ ] Basic UI for task page 
 - [ ] Animations
+- [ ] Include advanced features like indenting (such as a task can contain subtasks)
 
 
 # Problem statement
