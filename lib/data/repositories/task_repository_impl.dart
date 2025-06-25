@@ -2,14 +2,15 @@
 /// 
 /// Implementation of the (abstract) task repository 
 
-
 import 'dart:async';
+
 import 'package:todolist/domain/repositories/task_repository.dart';
+import 'package:todolist/data/datasources/todo_sqlite_datasource.dart';
 import 'package:todolist/domain/entities/task_entity.dart';
 import 'package:todolist/data/models/task_model.dart';
 
 class TaskRepositoryImpl implements TaskRepository {
-  final TasksDataSource dataSource;
+  final SqliteDataSource dataSource;
 
   TaskRepositoryImpl({
     required this.dataSource,
