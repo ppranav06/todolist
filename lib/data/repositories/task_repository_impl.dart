@@ -27,7 +27,7 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<TaskEntity?> getTaskbyId(int id) async {
+  Future<TaskEntity?> getTaskbyId(String id) async {
     // requirement: to figure out if the ID does not exist
     try{
       final TaskModel? targetTask = await dataSource.getTaskbyId(id);

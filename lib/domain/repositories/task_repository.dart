@@ -8,7 +8,7 @@ abstract class TaskRepository{
   // defining the required members and attributes
 
   Future<List<TaskEntity>> getAllTasks();
-  Future<TaskEntity?> getTaskbyId(int id);
+  Future<TaskEntity?> getTaskbyId(String id);
   Future<void> addTask(TaskEntity todo);
   Future<void> updateTask(TaskEntity todo);
   Future<void> deleteTask(String id);
