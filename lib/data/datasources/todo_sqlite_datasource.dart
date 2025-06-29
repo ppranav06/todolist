@@ -57,10 +57,10 @@ class SqliteDataSource implements DataSource{
   Future<List<TaskModel>> getAllTasks() async {
     try {
       Database db = await connect();
-      List tasks = await db.query("select * from $_tableName;");
+      List<Map<String, dynamic>> tasks = await db.query(_tableName);
       return tasks.map((map) => TaskModel.fromMap(map)).toList();
-    }  catch (err) {
-      throw err;
+    } catch (err) {
+      rethrow;
     }
   }
 
@@ -68,13 +68,18 @@ class SqliteDataSource implements DataSource{
   Future<TaskModel?> getTaskbyId(String id) async {
     try {
       Database db = await connect();
-      final task = await db.query("select * from $_tableName where id=$id;");
-      if (task == []) {
+      final List<Map<String, dynamic>> task = await db.query(
+        _tableName,
+        where: 'id = ?',
+        whereArgs: [int.parse(id)],
+      );
+      
+      if (task.isEmpty) {
         return null; // empty list leads to no result obtained
       }
-      return TaskModel.fromMap(task[0]);
+      return TaskModel.fromMap(task.first);
     } catch (err) {
-      throw err;
+      rethrow;
     }
   }
 
@@ -82,12 +87,25 @@ class SqliteDataSource implements DataSource{
   Future<void> insertTask(TaskModel task) async {
     try {
       Database db = await connect();
-      final result = db.query('''
-        INSERT INTO $_tableName (${task.toMap().keys})  
-        VALUES ${task.toMap().values}''');
-      // apparently task.toMap().keys must return only the relevant keys. gotta test this method
+      
+      // Create a map without the ID if it's null (for auto-increment)
+      Map<String, Object?> taskMap = task.toMap();
+      if (task.id == null) {
+        taskMap.remove('id');
+      }
+      
+      // Handle DateTime objects correctly
+      taskMap['createdAt'] = task.createdAt.millisecondsSinceEpoch;
+      if (task.dueDate != null) {
+        taskMap['dueDate'] = task.dueDate!.millisecondsSinceEpoch;
+      }
+      if (task.completedAt != null) {
+        taskMap['completedAt'] = task.completedAt!.millisecondsSinceEpoch;
+      }
+      
+      await db.insert(_tableName, taskMap);
     } catch (err) {
-      throw err;
+      rethrow;
     }
   }
 
@@ -95,12 +113,32 @@ class SqliteDataSource implements DataSource{
   Future<void> updateTask(TaskModel task) async {
     try {
       Database db = await connect();
-      final result = db.query('''
-      UPDATE $_tableName SET (${task.toMap().keys}) VALUES 
-      (${task.toMap().values})
-      '''); // similar to insert query 
+      
+      if (task.id == null) {
+        throw Exception("Cannot update task without an ID");
+      }
+      
+      // Create map for update
+      Map<String, Object?> taskMap = task.toMap();
+      taskMap.remove('id'); // Remove ID from update values
+      
+      // Handle DateTime objects correctly
+      taskMap['createdAt'] = task.createdAt.millisecondsSinceEpoch;
+      if (task.dueDate != null) {
+        taskMap['dueDate'] = task.dueDate!.millisecondsSinceEpoch;
+      }
+      if (task.completedAt != null) {
+        taskMap['completedAt'] = task.completedAt!.millisecondsSinceEpoch;
+      }
+      
+      await db.update(
+        _tableName, 
+        taskMap,
+        where: 'id = ?',
+        whereArgs: [task.id]
+      );
     } catch (err) {
-      throw err;
+      rethrow;
     }
   }
 
@@ -108,9 +146,13 @@ class SqliteDataSource implements DataSource{
   Future<void> deleteTask(String id) async {
     try {
       Database db = await connect();
-      final result = db.query('''DELETE FROM $_tableName WHERE id=$id''');
+      await db.delete(
+        _tableName,
+        where: 'id = ?',
+        whereArgs: [int.parse(id)]
+      );
     } catch (err) {
-      throw err;
+      rethrow;
     }
   }
 
@@ -118,12 +160,20 @@ class SqliteDataSource implements DataSource{
   Future<List<TaskModel>> searchTasks(String query) async {
     try {
       Database db = await connect();
-      List nameMatches = await db.query("select * from $_tableName where title=$query");
-      List descriptionMatches = await db.query("select * from $_tableName where $query in description"); // CORRECT this query later
-      // return the combined list with each element converted to TaskModel
-      return [nameMatches, descriptionMatches].expand((element) => element).toList().map((m) => TaskModel.fromMap(m)).toList();
+      
+      // Use LIKE operator with % wildcards for partial matches
+      String searchPattern = '%$query%';
+      
+      // Query for matches in title or description
+      List<Map<String, dynamic>> matches = await db.rawQuery(
+        "SELECT * FROM $_tableName WHERE title LIKE ? OR description LIKE ?",
+        [searchPattern, searchPattern]
+      );
+      
+      // Convert to TaskModel list
+      return matches.map((m) => TaskModel.fromMap(m)).toList();
     } catch (err) {
-      throw err;      
+      rethrow;      
     }
   }
 
@@ -131,11 +181,18 @@ class SqliteDataSource implements DataSource{
   Future<List<TaskModel>> getTasksbyStatus(bool isCompleted) async {
     try {
       Database db = await connect();
-      List matches = await db.query("select * from $_tableName where isCompleted=$isCompleted");
-      // return the combined list with each element converted to TaskModel
+      
+      // Use parameterized query
+      List<Map<String, dynamic>> matches = await db.query(
+        _tableName,
+        where: 'isCompleted = ?',
+        whereArgs: [isCompleted ? 1 : 0], // SQLite uses 1/0 for boolean
+      );
+      
+      // Convert to TaskModel list
       return matches.map((m) => TaskModel.fromMap(m)).toList();
     } catch (err) {
-      throw err;      
+      rethrow;      
     }
   }
   
@@ -144,10 +201,10 @@ class SqliteDataSource implements DataSource{
   Future<int> getTotalTasksCount() async {
     try {
       Database db = await connect();
-      final result = await db.query("select count(*) from $_tableName");
-      return result[0]; // return the count maybe here (yet to figure out parsing)
+      final result = await db.rawQuery("SELECT COUNT(*) as count FROM $_tableName");
+      return Sqflite.firstIntValue(result) ?? 0;
     } catch (err) {
-      throw err;
+      rethrow;
     }
   }
 
@@ -155,10 +212,10 @@ class SqliteDataSource implements DataSource{
   Future<int> getCompletedTasksCount() async {
     try {
       Database db = await connect();
-      final result = db.query("select count(*) from $_tableName where isCompleted=true");
-      return result[0];
+      final result = await db.rawQuery("SELECT COUNT(*) as count FROM $_tableName WHERE isCompleted = 1");
+      return Sqflite.firstIntValue(result) ?? 0;
     } catch (err) {
-      throw err;
+      rethrow;
     }
   }
 }
