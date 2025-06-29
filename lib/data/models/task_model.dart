@@ -6,18 +6,18 @@ import 'package:todolist/domain/entities/task_entity.dart';
 class TaskModel{
   final int? id;
   final String title;
-  final String description;
+  final String? description;
   final DateTime createdAt;
-  final DateTime dueDate;
+  final DateTime? dueDate;
   final bool isCompleted;
   final DateTime? completedAt;
   
   TaskModel({
     this.id,
     required this.title,
-    required this.description,
+    this.description,
     required this.createdAt,
-    required this.dueDate,
+    this.dueDate,
     this.isCompleted = false,
     this.completedAt,
   }); // Constructor - initialisation
@@ -38,6 +38,37 @@ class TaskModel{
       isCompleted: entity.isCompleted,
       completedAt: entity.completedAt,
     );
+  }
+  /// Creates a TaskModel from a Map
+  /// 
+  /// This factory constructor converts a map (sqlite response type) into a data model.
+  /// Use this when you need to convert from a map to data layer.
+  /// 
+  /// [map] The map to convert from.
+  factory TaskModel.fromMap(Map map) {
+    try {
+      return TaskModel(
+        id: map['id'],
+        title: map['title'],
+        description: map['description'],
+        createdAt: map['createdAt'] is int 
+          ? DateTime.fromMillisecondsSinceEpoch(map['createdAt']) 
+          : DateTime.parse(map['createdAt'].toString()),
+        dueDate: map['dueDate'] != null 
+          ? (map['dueDate'] is int 
+            ? DateTime.fromMillisecondsSinceEpoch(map['dueDate']) 
+            : DateTime.parse(map['dueDate'].toString()))
+          : null,
+        isCompleted: map['isCompleted'] == 1, // Convert from SQLite integer to bool
+        completedAt: map['completedAt'] != null 
+          ? (map['completedAt'] is int 
+            ? DateTime.fromMillisecondsSinceEpoch(map['completedAt']) 
+            : DateTime.parse(map['completedAt'].toString()))
+          : null,
+      );
+    } catch (err) {
+      throw err;
+    }
   }
   // Converting into a map 
   Map<String, Object?> toMap(){
@@ -68,7 +99,7 @@ class TaskModel{
       'title':  title,
       'description':  description,
       'createdAt':  createdAt.toIso8601String(),
-      'dueDate':  dueDate.toIso8601String(),
+      'dueDate':  dueDate?.toIso8601String(),
       'isCompleted':  isCompleted,
       'completedAt': completedAt?.toIso8601String(),
      };
@@ -79,6 +110,6 @@ class TaskModel{
   }
 
   TaskEntity toEntity(){
-    return TaskEntity(id: id.toString(), title: title, description: description, createdAt: createdAt, dueDate: dueDate, completedAt: completedAt);
+    return TaskEntity(id: id!.toString(), title: title, description: description!, createdAt: createdAt, dueDate: dueDate!, completedAt: completedAt!);
   }
 }

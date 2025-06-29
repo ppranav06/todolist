@@ -1,23 +1,21 @@
 // Task entity
 // The business entity of the task item 
 
-import 'dart:convert';
-
 class TaskEntity{
-  final String id;
+  final String? id;
   final String title;
-  final String description;
+  final String? description;
   final DateTime createdAt;
-  final DateTime dueDate;
+  final DateTime? dueDate;
   final bool isCompleted;
   final DateTime? completedAt;
   
   TaskEntity({
-    required this.id,
+    this.id,
     required this.title,
-    required this.description,
+    this.description,
     required this.createdAt,
-    required this.dueDate,
+    this.dueDate,
     this.isCompleted = false,
     this.completedAt,
   }); // Constructor - initialisation
@@ -25,6 +23,6 @@ class TaskEntity{
   // converting into string
   @override
   String toString(){
-    return 'TaskModel{id: $id, title: $title, description: $description, createdAt: $createdAt, dueDate: $dueDate, isCompleted: $isCompleted}';
+    return 'TaskModel{title: $title, description: $description, createdAt: $createdAt, dueDate: $dueDate, isCompleted: $isCompleted, completedAt: $completedAt}';
   }
 }
